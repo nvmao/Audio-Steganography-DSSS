@@ -1,7 +1,5 @@
 package com.fourier2;
 
-import com.mao.Decoder;
-
 /**
  * Provides float[] arrays of successive spectrum frames retrieved via
  * FFT from a Decoder. The frames might overlapp by n samples also called

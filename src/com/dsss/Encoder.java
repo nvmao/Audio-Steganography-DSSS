@@ -6,9 +6,7 @@ import com.mao.AudioDevice;
 import com.mao.AudioWriter;
 import com.mao.WaveDecoder;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.*;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,61 +26,50 @@ public class Encoder {
         this.originalAudioFile = originalAudioFile;
     }
 
-    private  ArrayList<Float> getWaveFromAudio() throws Exception {
-        WaveDecoder decoder = new WaveDecoder( new FileInputStream( originalAudioFile ));
-        float[] samples = new float[1024];
-        ArrayList<Float> originalWaveSamples = new ArrayList<Float>();
-
-        int readSamples = 0;
-        while( ( readSamples = decoder.readSamples( samples ) ) > 0 ){
-            for (float b : samples){
-                originalWaveSamples.add(b);
-            }
-        }
-        return originalWaveSamples;
-    }
-
-    private int[] pnSequenceKey(int audioSize){
-        int[] pn = new int[audioSize];
-        Random random = new Random(key);
-
-        for(int i = 0;i < audioSize ; i++){
-            int rand = random.nextInt() % 2  == 0 ? 1 : 0;
-            pn[i] = rand;
-        }
-        return pn;
-    }
-
     public void encode() throws Exception {
 
-        Binary message_binary = BinaryTool.ASCIIToBinary(message);
-        ArrayList<Float> samplesWave = this.getWaveFromAudio();
+        int[] message_binary = BinaryTool.convertStringToBinary(message);
+        System.out.println("message: ");
+        for(int i =0 ; i < message_binary.length;i++){
+            System.out.print(message_binary[i]);
+        }
+        System.out.println();
+
+        for(int i =0 ; i < message_binary.length;i++){
+            if(message_binary[i] == 0){
+                message_binary[i] = -1;
+            }
+        }
+
+        ArrayList<Float> samplesWave = Common.getWaveFromAudio(originalAudioFile);
 
         System.out.println(samplesWave.size());
         System.out.println(message_binary);
 
-        int[] pnSequence = this.pnSequenceKey(samplesWave.size());
+        int[] pnSequence = Common.pnSequenceKey(key,samplesWave.size());
         System.out.println(pnSequence.length);
 
-        int num_per_character = samplesWave.size() / message_binary.length();
+        int num_per_character = samplesWave.size() / message_binary.length;
 
         System.out.println("wave size : " + samplesWave.size());
-        System.out.println("message size: " + message_binary.length());
+        System.out.println("message size: " + message_binary.length);
         System.out.println("num per char: " + num_per_character);
 
         ArrayList<Integer> spreadSequences = new ArrayList<Integer>();
 
         int current_pn = 0;
-        for(int i = 0; i < message_binary.length();i++){
+        for(int i = 0; i < message_binary.length;i++){
 
-            int data = message_binary.getIntArray()[i];
+            int data = message_binary[i];
 
             for(int j = 0; j < num_per_character;j++){
-                int spread = data ^ pnSequence[current_pn];
+                int spread = data * pnSequence[current_pn];
                 current_pn++;
                 spreadSequences.add(spread);
             }
         }
+
+        System.out.println("prev spread sequences size: " + spreadSequences.size());
 
         if(spreadSequences.size() < samplesWave.size()){
             int diff = samplesWave.size() - spreadSequences.size();
@@ -91,14 +78,30 @@ public class Encoder {
             }
         }
         System.out.println("spread sequences size: " + spreadSequences.size());
+        for(int i = 0; i < spreadSequences.size();i++){
+            System.out.print(spreadSequences.get(i) + " ");
+        }
+        System.out.println();
 
 
         // embed
         for(int i =0 ; i < samplesWave.size();i++){
-            if(spreadSequences.get(i) == 0){
+            if(spreadSequences.get(i) == -1){
                 samplesWave.set(i,0.0f);
             }
         }
+
+        System.out.println("sample waves: ");
+        for(int i = 0; i < 10;i++){
+            System.out.print(samplesWave.get(i) + " ");
+        }
+        System.out.println();
+
+//        for(int i = 0 ; i < samplesWave.size();i++){
+//            if(spreadSequences.get(i) == 0){
+//                samplesWave.set(i,0.0f);
+//            }
+//        }
 
         this.outputAudio(samplesWave);
     }
@@ -111,28 +114,75 @@ public class Encoder {
         for (int i = 0; i < samplesWave.size(); i++)
         {
             samples[slice] = samplesWave.get(i);
-            System.out.println(samples[slice]);
+//            System.out.println(samples[slice]);
             slice++;
             if(slice == 1024){
                 device.writeSamples( samples );
                 samples = new float[1024];
                 slice = 0;
-                System.out.println(samples.length);
+//                System.out.println(samples.length);
             }
         }
         if(slice != 0){
             device.writeSamples( samples );
         }
 
-        AudioFormat format = new AudioFormat( AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 1, 2, 44100, false );
 
-        AudioWriter audioWriter = new AudioWriter(new File("file/encode.wav"),format,  AudioFileFormat.Type.WAVE);
 
-        for(Byte[] b : device.getBuffer_list()){
+        final double sampleRate = 44100.0;
+        final double frequency = 440;
+        final double frequency2 = 90;
+        final double amplitude = 1.0;
+        final double seconds = 2.0;
+        final double twoPiF = 2 * Math.PI * frequency;
+        final double piF = Math.PI * frequency2;
 
-            audioWriter.write(BinaryTool.toPrimitives(b));
+        float[] buffer = new float[71680];
+
+//        for (int sample = 0; sample < buffer.length; sample++) {
+//            double time = sample / sampleRate;
+//            buffer[sample] = (float)(amplitude * Math.cos(piF * time) * Math.sin(twoPiF * time));
+//        }
+        int t = 0;
+        for(float b : samplesWave){
+            buffer[t] = b;
+            t++;
         }
-        audioWriter.close();
+
+        final byte[] byteBuffer = new byte[buffer.length * 2];
+
+        int bufferIndex = 0;
+        for (int i = 0; i < byteBuffer.length; i++) {
+            final int x = (int)(buffer[bufferIndex++] * 32767.0);
+
+            byteBuffer[i++] = (byte)x;
+            byteBuffer[i] = (byte)(x >>> 8);
+        }
+
+        File out = new File("file/encode.wav");
+
+        final boolean bigEndian = false;
+        final boolean signed = true;
+
+        final int bits = 16;
+        final int channels = 1;
+
+        AudioFormat format = new AudioFormat((float)sampleRate, bits, channels, signed, bigEndian);
+        ByteArrayInputStream bais = new ByteArrayInputStream(byteBuffer);
+        AudioInputStream audioInputStream = new AudioInputStream(bais, format, buffer.length);
+        AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, out);
+        audioInputStream.close();
+
+
+//        AudioFormat format = new AudioFormat( AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 1, 2, 44100, false );
+//
+//        AudioWriter audioWriter = new AudioWriter(new File("file/encode.wav"),format,  AudioFileFormat.Type.WAVE);
+//
+//        for(Byte[] b : device.getBuffer_list()){
+//
+//            audioWriter.write(BinaryTool.toPrimitives(b));
+//        }
+//        audioWriter.close();
 
 
     }

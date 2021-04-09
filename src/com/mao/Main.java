@@ -7,6 +7,7 @@ package com.mao;
 
 import com.binary.Binary;
 import com.binary.BinaryTool;
+import com.dsss.Decoder;
 import com.dsss.Encoder;
 import net.beadsproject.beads.core.AudioContext;
 import net.beadsproject.beads.data.Buffer;
@@ -52,12 +53,15 @@ public class Main {
     public static void main (String [] args) throws Exception {
 
         File file = new File("file/original.wav");
-        String message = "hello mao";
+        String message = "meoo meo";
         long key = 123;
 
         Encoder encoder = new Encoder(message,key,file);
-
         encoder.encode();
+
+        File encodeFile = new File("file/encode.wav");
+        Decoder decoder = new Decoder(encodeFile,key);
+        decoder.decode();
 
     }
 

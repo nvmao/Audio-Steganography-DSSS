@@ -14,6 +14,9 @@ import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 
 public class BinaryTool {
 	public static final int NUMBER_OF_BITS = 8;
@@ -45,6 +48,7 @@ public class BinaryTool {
 		for (int i = 0 ; i < binaryData.length ; i+=NUMBER_OF_BITS) {
 			Binary charBinary = new Binary(Arrays.copyOfRange(binaryData, i, i+NUMBER_OF_BITS));
 			String character = Character.toString(binaryToChar(charBinary));
+			System.out.println("cha: " + character);
 			stringRepr.append(character);
 		}
 		return stringRepr.toString();
@@ -89,12 +93,60 @@ public class BinaryTool {
 
 	}
 
+	public static int[] convertStringToBinary(String input) {
+
+
+		int c = 0;
+
+		StringBuilder str = new StringBuilder();
+		char[] chars = input.toCharArray();
+		for (char aChar : chars) {
+
+				String s =	String.format("%8s", Integer.toBinaryString(aChar))
+							.replaceAll(" ", "0") ;
+				str.append(s);
+		}
+
+		int result[] = new int[str.length()];
+		for(int i = 0; i < result.length;i++){
+			result[i] = Integer.parseInt(String.valueOf(str.charAt(i)));
+		}
+
+		return result;
+
+	}
+
+	public static String binaryToString(int[] binaryInput) {
+
+		String input = "";
+		for(int i = 0 ; i < binaryInput.length;i++){
+			if(i % 8 == 0 && i != 0){
+				input += " ";
+			}else{
+				input += binaryInput[i];
+			}
+		}
+		System.out.println("input: {" + input +"}");
+
+		// Java 8 makes life easier
+		String str = "";
+		String[] binaryStr = input.split(" ");
+
+		for(int i = 0; i < binaryStr.length; i++){
+			int charCode = Integer.parseInt(binaryStr[i], 2);
+			String character = new Character((char)charCode).toString();
+			str += character;
+		}
+
+		return str;
+	}
+
+
 	public static void main(String args[]) throws IOException {
-		String toConvert = args[0];
-		/*Binary testBinary = BinaryTool.ASCIIToBinary(toConvert);
-		System.out.println(toConvert + " in " + NUMBER_OF_BITS + "-bit binary is: " + testBinary);
-		System.out.println(testBinary + " converted back to ASCII is: " + BinaryTool.binaryToASCII(testBinary));*/
-		Binary fileData = BinaryTool.fileToBinary(new File(toConvert));
-		System.out.println(fileData);
+
+		int[] binary = convertStringToBinary("hello");
+
+		System.out.println(binaryToString(binary));
+
 	}
 }

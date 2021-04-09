@@ -15,7 +15,7 @@ import java.io.InputStream;
  * @author mzechner
  *
  */
-public class WaveDecoder implements com.mao.Decoder
+public class WaveDecoder
 	{
 	/** inverse max short value as float **/
 	private final float MAX_VALUE = 1.0f / Short.MAX_VALUE;

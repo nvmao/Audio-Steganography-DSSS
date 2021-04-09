@@ -28,7 +28,7 @@ public class AudioDevice
 	}
 
 	private final SourceDataLine out;
-	
+
 	private byte[] buffer = new byte[BUFFER_SIZE*2];
 	ArrayList<Byte[]> buffer_list = new ArrayList<>();
 
@@ -46,6 +46,7 @@ public class AudioDevice
 		out = AudioSystem.getSourceDataLine( format );
 		out.open(format);	
 		out.start();
+
 	}
 
 	public void writeSamples( float[] samples ) throws IOException {
